@@ -1,12 +1,17 @@
 ﻿using System;
 using System.Configuration;
 using System.IdentityModel.Selectors;
+using System.IdentityModel.Tokens;
+using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.ServiceModel;
 using System.ServiceModel.Description;
 using System.ServiceModel.Security;
+using System.Text;
+using System.Threading.Tasks;
 using Crossover.Builder.Common.Interfaces;
 using Crossover.Builder.Service;
+using Newtonsoft.Json;
 
 namespace Crossover.Builder.Server
 {
@@ -79,21 +84,51 @@ namespace Crossover.Builder.Server
         }
     }
 
-    internal class UserNamePassValidator :
-        System.IdentityModel.Selectors.UserNamePasswordValidator
+    internal class UserNamePassValidator: UserNamePasswordValidator
     {
         public override void Validate(string userName, string password)
         {
-            return;
             if (userName == null || password == null)
             {
                 throw new ArgumentNullException();
             }
 
-            if (!(userName == "fayaz" && password == "soomro"))
+            var client = new HttpClient { BaseAddress = new Uri("http://localhost:2038") };
+            var response = client.PostAsync("token",
+                new StringContent(
+                    string.Format("grant_type=password&username={0}&password={1}", userName, password),
+                    Encoding.UTF8,
+                    "application/x-www-form-urlencoded")).Result;
+
+            if (response.IsSuccessStatusCode)
             {
-                throw new FaultException("Incorrect Username or Password");
+                var message = response.Content.ReadAsStringAsync().Result;
+                var tokenInfo = JsonConvert.DeserializeObject<TokenInfo>(message);
+                Console.WriteLine("Username: {0}, Token: {1}", tokenInfo.Username, tokenInfo.AccessToken);
+                return;
             }
+
+            throw new SecurityTokenException("Incorrect Username or Password");
         }
+    }
+    class TokenInfo
+    {
+        [JsonProperty("access_token")]
+        public string AccessToken { get; set; }
+
+        [JsonProperty("token_type")]
+        public string TokenType { get; set; }
+
+        [JsonProperty("expires_in")]
+        public int ExpiresIn { get; set; }
+
+        [JsonProperty("userName")]
+        public string Username { get; set; }
+
+        [JsonProperty(".issued")]
+        public string IssuedAt { get; set; }
+
+        [JsonProperty(".expires")]
+        public string ExpiresAt { get; set; }
     }
 }

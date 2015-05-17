@@ -42,8 +42,8 @@ namespace Crossover.Builder.Client
             {
                 channelFactory.Credentials.ServiceCertificate.Authentication.CertificateValidationMode =
                     X509CertificateValidationMode.None;
-                channelFactory.Credentials.UserName.UserName = "Ivan";
-                channelFactory.Credentials.UserName.Password = "password";
+                channelFactory.Credentials.UserName.UserName = "rinader@rambler.ru";
+                channelFactory.Credentials.UserName.Password = "Password1!";
             }
 
             ICommandService channel = null;
